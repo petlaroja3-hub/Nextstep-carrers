@@ -1,0 +1,445 @@
+{
+  "entities": {
+    "Course": {
+      "title": "Course",
+      "description": "Educational pathway after Class 10 or Intermediate (Class 12)",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "titleTe": { "type": "string", "minLength": 0, "maxLength": 250 },
+        "level": { "type": "string", "enum": ["after_10th", "after_inter"] },
+        "category": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "duration": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "eligibility": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "eligibilityTe": { "type": "string", "minLength": 0, "maxLength": 1200 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 2500 },
+        "descriptionTe": { "type": "string", "minLength": 0, "maxLength": 3000 },
+        "subjects": { "type": "array", "description": "List of core subjects (max 15)" },
+        "studyPathways": { "type": "array", "description": "Available study pathways (max 15)" },
+        "careerOpportunities": { "type": "array", "description": "Potential career opportunities (max 15)" },
+        "furtherEducation": { "type": "array", "description": "Further study options (max 15)" },
+        "entranceExams": { "type": "array", "description": "Relevant entrance exams (max 15)" },
+        "admissionProcess": { "type": "string", "minLength": 2, "maxLength": 1000 },
+        "officialSourceName": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "published": { "type": "boolean" },
+        "isSampleData": { "type": "boolean" },
+        "lastVerifiedDate": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "level",
+        "category",
+        "duration",
+        "eligibility",
+        "description",
+        "subjects",
+        "studyPathways",
+        "careerOpportunities",
+        "furtherEducation",
+        "entranceExams",
+        "admissionProcess",
+        "officialSourceName",
+        "officialUrl",
+        "state",
+        "published",
+        "isSampleData",
+        "lastVerifiedDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CourseCategory": {
+      "title": "CourseCategory",
+      "description": "Category grouping for courses",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "nameTe": { "type": "string", "minLength": 0, "maxLength": 150 },
+        "level": { "type": "string", "enum": ["after_10th", "after_inter", "both"] },
+        "description": { "type": "string", "minLength": 5, "maxLength": 600 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "level", "description", "published", "createdAt", "updatedAt"]
+    },
+    "EntranceExam": {
+      "title": "EntranceExam",
+      "description": "State or national entrance examination",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 180 },
+        "nameTe": { "type": "string", "minLength": 0, "maxLength": 220 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "purpose": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "purposeTe": { "type": "string", "minLength": 0, "maxLength": 1200 },
+        "eligibility": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "examAuthority": { "type": "string", "minLength": 2, "maxLength": 250 },
+        "applicationInfo": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "importantDates": { "type": "string", "minLength": 4, "maxLength": 500 },
+        "datesVerified": { "type": "boolean" },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "targetCourses": { "type": "array", "description": "Target courses (max 15)" },
+        "published": { "type": "boolean" },
+        "lastVerifiedDate": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "category",
+        "state",
+        "purpose",
+        "eligibility",
+        "examAuthority",
+        "applicationInfo",
+        "importantDates",
+        "datesVerified",
+        "officialUrl",
+        "targetCourses",
+        "published",
+        "lastVerifiedDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "College": {
+      "title": "College",
+      "description": "Recognized college or university directory entry",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 3, "maxLength": 250 },
+        "nameTe": { "type": "string", "minLength": 0, "maxLength": 280 },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India"] },
+        "district": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "location": { "type": "string", "minLength": 2, "maxLength": 250 },
+        "institutionType": { "type": "string", "enum": ["Central Institute", "State University", "Government College", "Private/Deemed"] },
+        "availableCourses": { "type": "array", "description": "Available courses (max 15)" },
+        "admissionProcess": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "entranceExams": { "type": "array", "description": "Relevant entrance exams (max 15)" },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "sourceReference": { "type": "string", "minLength": 2, "maxLength": 250 },
+        "isSampleRecord": { "type": "boolean" },
+        "published": { "type": "boolean" },
+        "lastVerifiedDate": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "state",
+        "district",
+        "location",
+        "institutionType",
+        "availableCourses",
+        "admissionProcess",
+        "entranceExams",
+        "officialUrl",
+        "sourceReference",
+        "isSampleRecord",
+        "published",
+        "lastVerifiedDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Scholarship": {
+      "title": "Scholarship",
+      "description": "State or central scholarship program",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 3, "maxLength": 250 },
+        "nameTe": { "type": "string", "minLength": 0, "maxLength": 280 },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "educationLevel": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "eligibility": { "type": "string", "minLength": 5, "maxLength": 1200 },
+        "eligibilityTe": { "type": "string", "minLength": 0, "maxLength": 1500 },
+        "benefits": { "type": "string", "minLength": 5, "maxLength": 1000 },
+        "applicationPeriod": { "type": "string", "minLength": 4, "maxLength": 300 },
+        "requiredDocuments": { "type": "array", "description": "Required documents (max 15)" },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "sourceReference": { "type": "string", "minLength": 2, "maxLength": 250 },
+        "published": { "type": "boolean" },
+        "lastVerifiedDate": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "state",
+        "educationLevel",
+        "category",
+        "eligibility",
+        "benefits",
+        "applicationPeriod",
+        "requiredDocuments",
+        "officialUrl",
+        "sourceReference",
+        "published",
+        "lastVerifiedDate",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Career": {
+      "title": "Career",
+      "description": "Career option and pathway guide",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "titleTe": { "type": "string", "minLength": 0, "maxLength": 240 },
+        "sector": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "description": { "type": "string", "minLength": 10, "maxLength": 2000 },
+        "descriptionTe": { "type": "string", "minLength": 0, "maxLength": 2500 },
+        "requiredEducation": { "type": "string", "minLength": 5, "maxLength": 800 },
+        "skills": { "type": "array", "description": "Relevant skills (max 15)" },
+        "industries": { "type": "array", "description": "Potential industries (max 15)" },
+        "furtherStudy": { "type": "array", "description": "Further study options (max 15)" },
+        "relatedCourses": { "type": "array", "description": "Related courses (max 15)" },
+        "relatedExams": { "type": "array", "description": "Related entrance exams (max 15)" },
+        "officialReference": { "type": "string", "minLength": 2, "maxLength": 300 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "sector",
+        "description",
+        "requiredEducation",
+        "skills",
+        "industries",
+        "furtherStudy",
+        "relatedCourses",
+        "relatedExams",
+        "officialReference",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "CareerUpdate": {
+      "title": "CareerUpdate",
+      "description": "Official educational or examination announcement",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 250 },
+        "titleTe": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "description": { "type": "string", "minLength": 5, "maxLength": 2000 },
+        "descriptionTe": { "type": "string", "minLength": 0, "maxLength": 2400 },
+        "category": { "type": "string", "enum": ["Exam", "Scholarship", "Admission", "Course", "General"] },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "sourceName": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "publicationDate": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "dateChecked": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "verificationStatus": { "type": "string", "enum": ["VERIFIED", "UNVERIFIED", "CHECK_FAILED"] },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "description",
+        "category",
+        "state",
+        "sourceName",
+        "officialUrl",
+        "publicationDate",
+        "dateChecked",
+        "verificationStatus",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OfficialSource": {
+      "title": "OfficialSource",
+      "description": "Configured official government or exam portal for live status verification",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "category": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "lastChecked": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "lastStatus": { "type": "string", "enum": ["VERIFIED_REACHABLE", "UNVERIFIED", "CHECK_FAILED"] },
+        "lastHttpCode": { "type": "number" },
+        "lastDetectedTitle": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "lastError": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "name",
+        "category",
+        "state",
+        "officialUrl",
+        "lastChecked",
+        "lastStatus",
+        "lastHttpCode",
+        "lastDetectedTitle",
+        "lastError",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "VerificationLog": {
+      "title": "VerificationLog",
+      "description": "Historical record of an official source verification run",
+      "type": "object",
+      "properties": {
+        "sourceId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "sourceName": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "status": { "type": "string", "enum": ["VERIFIED_REACHABLE", "CHECK_FAILED"] },
+        "httpCode": { "type": "number" },
+        "detectedTitle": { "type": "string", "minLength": 0, "maxLength": 300 },
+        "errorMessage": { "type": "string", "minLength": 0, "maxLength": 500 },
+        "checkedByUid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "sourceId",
+        "sourceName",
+        "officialUrl",
+        "status",
+        "httpCode",
+        "detectedTitle",
+        "errorMessage",
+        "checkedByUid",
+        "createdAt"
+      ]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-site verified alert for exams, scholarships, or courses",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "minLength": 3, "maxLength": 220 },
+        "titleTe": { "type": "string", "minLength": 0, "maxLength": 260 },
+        "message": { "type": "string", "minLength": 5, "maxLength": 1200 },
+        "messageTe": { "type": "string", "minLength": 0, "maxLength": 1500 },
+        "category": { "type": "string", "enum": ["Exam", "Scholarship", "Course", "Deadline", "Announcement"] },
+        "state": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "sourceReference": { "type": "string", "minLength": 2, "maxLength": 200 },
+        "officialUrl": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "dateLabel": { "type": "string", "minLength": 4, "maxLength": 60 },
+        "published": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "title",
+        "message",
+        "category",
+        "state",
+        "sourceReference",
+        "officialUrl",
+        "dateLabel",
+        "published",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "UserPreference": {
+      "title": "UserPreference",
+      "description": "Private career planner preferences saved by an authenticated user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "currentLevel": { "type": "string", "enum": ["class_10", "inter_mpc", "inter_bipc", "inter_cec_mec", "diploma_iti", "undergraduate"] },
+        "interests": { "type": "array", "description": "Selected interest areas (max 10)" },
+        "preferredSubjects": { "type": "array", "description": "Preferred subjects (max 10)" },
+        "careerGoals": { "type": "array", "description": "Target career sectors (max 10)" },
+        "preferredState": { "type": "string", "enum": ["Andhra Pradesh", "Telangana", "All India", "AP & TG"] },
+        "educationPreference": { "type": "string", "enum": ["degree_academic", "technical_professional", "diploma_skill", "any"] },
+        "readNotificationIds": { "type": "array", "description": "Notification IDs marked read (max 100)" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId",
+        "currentLevel",
+        "interests",
+        "preferredSubjects",
+        "careerGoals",
+        "preferredState",
+        "educationPreference",
+        "readNotificationIds",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "AdminRole": {
+      "title": "AdminRole",
+      "description": "Administrator role record in adminRoles collection",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "email": { "type": "string", "minLength": 5, "maxLength": 180 },
+        "role": { "type": "string", "enum": ["admin", "super_admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/courses/{courseId}": {
+      "schema": "Course",
+      "description": "Courses after Class 10 and Intermediate"
+    },
+    "/courseCategories/{categoryId}": {
+      "schema": "CourseCategory",
+      "description": "Course category definitions"
+    },
+    "/entranceExams/{examId}": {
+      "schema": "EntranceExam",
+      "description": "State and national entrance examinations"
+    },
+    "/colleges/{collegeId}": {
+      "schema": "College",
+      "description": "Colleges and universities directory"
+    },
+    "/scholarships/{scholarshipId}": {
+      "schema": "Scholarship",
+      "description": "State and central scholarships"
+    },
+    "/careers/{careerId}": {
+      "schema": "Career",
+      "description": "Career pathways and options"
+    },
+    "/careerUpdates/{updateId}": {
+      "schema": "CareerUpdate",
+      "description": "Verified official education updates and announcements"
+    },
+    "/officialSources/{sourceId}": {
+      "schema": "OfficialSource",
+      "description": "Configured government and exam websites for verification"
+    },
+    "/verificationHistory/{logId}": {
+      "schema": "VerificationLog",
+      "description": "Audit logs of official website verification runs"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "In-site verified notifications"
+    },
+    "/userPreferences/{userId}": {
+      "schema": "UserPreference",
+      "description": "Private user career planner preferences and read notifications"
+    },
+    "/adminRoles/{adminUid}": {
+      "schema": "AdminRole",
+      "description": "Authorized administrator registry"
+    }
+  }
+}

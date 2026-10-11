@@ -1,0 +1,602 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Pillar 0: Global Default-Deny Catch-All
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // =========================================================================
+    // GLOBAL PRIMITIVES & IDENTITY HELPERS
+    // =========================================================================
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isVerifiedUser() && request.auth.uid == userId;
+    }
+
+    // Bootstrapped Admin uses verified runtime owner email (no DB read required, safe for list rules)
+    function isBootstrappedAdmin() {
+      return isVerifiedUser() && request.auth.token.email == 'kodurisiri67@gmail.com';
+    }
+
+    // Full Admin check for single-document operations
+    function isAdmin() {
+      return isBootstrappedAdmin() || (
+        isVerifiedUser() &&
+        exists(/databases/$(database)/documents/adminRoles/$(request.auth.uid))
+      );
+    }
+
+    function isBoundedStringList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || (arr[0] is string && arr[0].size() <= 300));
+    }
+
+    function isValidStateEnum(val) {
+      return val is string && (
+        val == 'Andhra Pradesh' ||
+        val == 'Telangana' ||
+        val == 'All India' ||
+        val == 'AP & TG'
+      );
+    }
+
+    // =========================================================================
+    // ENTITY VALIDATION BLUEPRINTS
+    // =========================================================================
+
+    function isValidCourse(data) {
+      return data.keys().hasAll([
+        'title', 'titleTe', 'level', 'category', 'duration', 'eligibility', 'eligibilityTe',
+        'description', 'descriptionTe', 'subjects', 'studyPathways', 'careerOpportunities',
+        'furtherEducation', 'entranceExams', 'admissionProcess', 'officialSourceName',
+        'officialUrl', 'state', 'published', 'isSampleData', 'lastVerifiedDate',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'titleTe', 'level', 'category', 'duration', 'eligibility', 'eligibilityTe',
+        'description', 'descriptionTe', 'subjects', 'studyPathways', 'careerOpportunities',
+        'furtherEducation', 'entranceExams', 'admissionProcess', 'officialSourceName',
+        'officialUrl', 'state', 'published', 'isSampleData', 'lastVerifiedDate',
+        'createdAt', 'updatedAt'
+      ]) &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+      data.titleTe is string && data.titleTe.size() <= 250 &&
+      data.level is string && (data.level == 'after_10th' || data.level == 'after_inter') &&
+      data.category is string && data.category.size() >= 2 && data.category.size() <= 100 &&
+      data.duration is string && data.duration.size() >= 2 && data.duration.size() <= 100 &&
+      data.eligibility is string && data.eligibility.size() >= 5 && data.eligibility.size() <= 1000 &&
+      data.eligibilityTe is string && data.eligibilityTe.size() <= 1200 &&
+      data.description is string && data.description.size() >= 10 && data.description.size() <= 2500 &&
+      data.descriptionTe is string && data.descriptionTe.size() <= 3000 &&
+      isBoundedStringList(data.subjects, 15) &&
+      isBoundedStringList(data.studyPathways, 15) &&
+      isBoundedStringList(data.careerOpportunities, 15) &&
+      isBoundedStringList(data.furtherEducation, 15) &&
+      isBoundedStringList(data.entranceExams, 15) &&
+      data.admissionProcess is string && data.admissionProcess.size() >= 2 && data.admissionProcess.size() <= 1000 &&
+      data.officialSourceName is string && data.officialSourceName.size() >= 2 && data.officialSourceName.size() <= 200 &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      isValidStateEnum(data.state) &&
+      data.published is bool &&
+      data.isSampleData is bool &&
+      data.lastVerifiedDate is string && data.lastVerifiedDate.size() >= 4 && data.lastVerifiedDate.size() <= 60 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCourseCategory(data) {
+      return data.keys().hasAll(['name', 'nameTe', 'level', 'description', 'published', 'createdAt', 'updatedAt']) &&
+      data.keys().hasOnly(['name', 'nameTe', 'level', 'description', 'published', 'createdAt', 'updatedAt']) &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 120 &&
+      data.nameTe is string && data.nameTe.size() <= 150 &&
+      data.level is string && (data.level == 'after_10th' || data.level == 'after_inter' || data.level == 'both') &&
+      data.description is string && data.description.size() >= 5 && data.description.size() <= 600 &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidEntranceExam(data) {
+      return data.keys().hasAll([
+        'name', 'nameTe', 'category', 'state', 'purpose', 'purposeTe', 'eligibility',
+        'examAuthority', 'applicationInfo', 'importantDates', 'datesVerified',
+        'officialUrl', 'targetCourses', 'published', 'lastVerifiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'nameTe', 'category', 'state', 'purpose', 'purposeTe', 'eligibility',
+        'examAuthority', 'applicationInfo', 'importantDates', 'datesVerified',
+        'officialUrl', 'targetCourses', 'published', 'lastVerifiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 180 &&
+      data.nameTe is string && data.nameTe.size() <= 220 &&
+      data.category is string && data.category.size() >= 2 && data.category.size() <= 100 &&
+      isValidStateEnum(data.state) &&
+      data.purpose is string && data.purpose.size() >= 5 && data.purpose.size() <= 1000 &&
+      data.purposeTe is string && data.purposeTe.size() <= 1200 &&
+      data.eligibility is string && data.eligibility.size() >= 5 && data.eligibility.size() <= 1000 &&
+      data.examAuthority is string && data.examAuthority.size() >= 2 && data.examAuthority.size() <= 250 &&
+      data.applicationInfo is string && data.applicationInfo.size() >= 5 && data.applicationInfo.size() <= 1000 &&
+      data.importantDates is string && data.importantDates.size() >= 4 && data.importantDates.size() <= 500 &&
+      data.datesVerified is bool &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      isBoundedStringList(data.targetCourses, 15) &&
+      data.published is bool &&
+      data.lastVerifiedDate is string && data.lastVerifiedDate.size() >= 4 && data.lastVerifiedDate.size() <= 60 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCollege(data) {
+      return data.keys().hasAll([
+        'name', 'nameTe', 'state', 'district', 'location', 'institutionType',
+        'availableCourses', 'admissionProcess', 'entranceExams', 'officialUrl',
+        'sourceReference', 'isSampleRecord', 'published', 'lastVerifiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'nameTe', 'state', 'district', 'location', 'institutionType',
+        'availableCourses', 'admissionProcess', 'entranceExams', 'officialUrl',
+        'sourceReference', 'isSampleRecord', 'published', 'lastVerifiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.name is string && data.name.size() >= 3 && data.name.size() <= 250 &&
+      data.nameTe is string && data.nameTe.size() <= 280 &&
+      data.state is string && (data.state == 'Andhra Pradesh' || data.state == 'Telangana' || data.state == 'All India') &&
+      data.district is string && data.district.size() >= 2 && data.district.size() <= 120 &&
+      data.location is string && data.location.size() >= 2 && data.location.size() <= 250 &&
+      data.institutionType is string && (
+        data.institutionType == 'Central Institute' ||
+        data.institutionType == 'State University' ||
+        data.institutionType == 'Government College' ||
+        data.institutionType == 'Private/Deemed'
+      ) &&
+      isBoundedStringList(data.availableCourses, 15) &&
+      data.admissionProcess is string && data.admissionProcess.size() >= 5 && data.admissionProcess.size() <= 1000 &&
+      isBoundedStringList(data.entranceExams, 15) &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      data.sourceReference is string && data.sourceReference.size() >= 2 && data.sourceReference.size() <= 250 &&
+      data.isSampleRecord is bool &&
+      data.published is bool &&
+      data.lastVerifiedDate is string && data.lastVerifiedDate.size() >= 4 && data.lastVerifiedDate.size() <= 60 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidScholarship(data) {
+      return data.keys().hasAll([
+        'name', 'nameTe', 'state', 'educationLevel', 'category', 'eligibility',
+        'eligibilityTe', 'benefits', 'applicationPeriod', 'requiredDocuments',
+        'officialUrl', 'sourceReference', 'published', 'lastVerifiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'nameTe', 'state', 'educationLevel', 'category', 'eligibility',
+        'eligibilityTe', 'benefits', 'applicationPeriod', 'requiredDocuments',
+        'officialUrl', 'sourceReference', 'published', 'lastVerifiedDate', 'createdAt', 'updatedAt'
+      ]) &&
+      data.name is string && data.name.size() >= 3 && data.name.size() <= 250 &&
+      data.nameTe is string && data.nameTe.size() <= 280 &&
+      isValidStateEnum(data.state) &&
+      data.educationLevel is string && data.educationLevel.size() >= 2 && data.educationLevel.size() <= 120 &&
+      data.category is string && data.category.size() >= 2 && data.category.size() <= 120 &&
+      data.eligibility is string && data.eligibility.size() >= 5 && data.eligibility.size() <= 1200 &&
+      data.eligibilityTe is string && data.eligibilityTe.size() <= 1500 &&
+      data.benefits is string && data.benefits.size() >= 5 && data.benefits.size() <= 1000 &&
+      data.applicationPeriod is string && data.applicationPeriod.size() >= 4 && data.applicationPeriod.size() <= 300 &&
+      isBoundedStringList(data.requiredDocuments, 15) &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      data.sourceReference is string && data.sourceReference.size() >= 2 && data.sourceReference.size() <= 250 &&
+      data.published is bool &&
+      data.lastVerifiedDate is string && data.lastVerifiedDate.size() >= 4 && data.lastVerifiedDate.size() <= 60 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCareer(data) {
+      return data.keys().hasAll([
+        'title', 'titleTe', 'sector', 'description', 'descriptionTe', 'requiredEducation',
+        'skills', 'industries', 'furtherStudy', 'relatedCourses', 'relatedExams',
+        'officialReference', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'titleTe', 'sector', 'description', 'descriptionTe', 'requiredEducation',
+        'skills', 'industries', 'furtherStudy', 'relatedCourses', 'relatedExams',
+        'officialReference', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 200 &&
+      data.titleTe is string && data.titleTe.size() <= 240 &&
+      data.sector is string && data.sector.size() >= 2 && data.sector.size() <= 100 &&
+      data.description is string && data.description.size() >= 10 && data.description.size() <= 2000 &&
+      data.descriptionTe is string && data.descriptionTe.size() <= 2500 &&
+      data.requiredEducation is string && data.requiredEducation.size() >= 5 && data.requiredEducation.size() <= 800 &&
+      isBoundedStringList(data.skills, 15) &&
+      isBoundedStringList(data.industries, 15) &&
+      isBoundedStringList(data.furtherStudy, 15) &&
+      isBoundedStringList(data.relatedCourses, 15) &&
+      isBoundedStringList(data.relatedExams, 15) &&
+      data.officialReference is string && data.officialReference.size() >= 2 && data.officialReference.size() <= 300 &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidCareerUpdate(data) {
+      return data.keys().hasAll([
+        'title', 'titleTe', 'description', 'descriptionTe', 'category', 'state',
+        'sourceName', 'officialUrl', 'publicationDate', 'dateChecked',
+        'verificationStatus', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'titleTe', 'description', 'descriptionTe', 'category', 'state',
+        'sourceName', 'officialUrl', 'publicationDate', 'dateChecked',
+        'verificationStatus', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.title is string && data.title.size() >= 3 && data.title.size() <= 250 &&
+      data.titleTe is string && data.titleTe.size() <= 300 &&
+      data.description is string && data.description.size() >= 5 && data.description.size() <= 2000 &&
+      data.descriptionTe is string && data.descriptionTe.size() <= 2400 &&
+      data.category is string && (
+        data.category == 'Exam' ||
+        data.category == 'Scholarship' ||
+        data.category == 'Admission' ||
+        data.category == 'Course' ||
+        data.category == 'General'
+      ) &&
+      isValidStateEnum(data.state) &&
+      data.sourceName is string && data.sourceName.size() >= 2 && data.sourceName.size() <= 200 &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      data.publicationDate is string && data.publicationDate.size() >= 4 && data.publicationDate.size() <= 60 &&
+      data.dateChecked is string && data.dateChecked.size() >= 4 && data.dateChecked.size() <= 60 &&
+      data.verificationStatus is string && (
+        data.verificationStatus == 'VERIFIED' ||
+        data.verificationStatus == 'UNVERIFIED' ||
+        data.verificationStatus == 'CHECK_FAILED'
+      ) &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidOfficialSource(data) {
+      return data.keys().hasAll([
+        'name', 'category', 'state', 'officialUrl', 'lastChecked', 'lastStatus',
+        'lastHttpCode', 'lastDetectedTitle', 'lastError', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'name', 'category', 'state', 'officialUrl', 'lastChecked', 'lastStatus',
+        'lastHttpCode', 'lastDetectedTitle', 'lastError', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 200 &&
+      data.category is string && data.category.size() >= 2 && data.category.size() <= 100 &&
+      isValidStateEnum(data.state) &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      data.lastChecked is string && data.lastChecked.size() >= 4 && data.lastChecked.size() <= 60 &&
+      data.lastStatus is string && (
+        data.lastStatus == 'VERIFIED_REACHABLE' ||
+        data.lastStatus == 'UNVERIFIED' ||
+        data.lastStatus == 'CHECK_FAILED'
+      ) &&
+      data.lastHttpCode is number &&
+      data.lastDetectedTitle is string && data.lastDetectedTitle.size() <= 300 &&
+      data.lastError is string && data.lastError.size() <= 500 &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidVerificationLog(data) {
+      return data.keys().hasAll([
+        'sourceId', 'sourceName', 'officialUrl', 'status', 'httpCode',
+        'detectedTitle', 'errorMessage', 'checkedByUid', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'sourceId', 'sourceName', 'officialUrl', 'status', 'httpCode',
+        'detectedTitle', 'errorMessage', 'checkedByUid', 'createdAt'
+      ]) &&
+      isValidId(data.sourceId) &&
+      data.sourceName is string && data.sourceName.size() >= 2 && data.sourceName.size() <= 200 &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      data.status is string && (data.status == 'VERIFIED_REACHABLE' || data.status == 'CHECK_FAILED') &&
+      data.httpCode is number &&
+      data.detectedTitle is string && data.detectedTitle.size() <= 300 &&
+      data.errorMessage is string && data.errorMessage.size() <= 500 &&
+      data.checkedByUid is string && data.checkedByUid == request.auth.uid &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+        'title', 'titleTe', 'message', 'messageTe', 'category', 'state',
+        'sourceReference', 'officialUrl', 'dateLabel', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'title', 'titleTe', 'message', 'messageTe', 'category', 'state',
+        'sourceReference', 'officialUrl', 'dateLabel', 'published', 'createdAt', 'updatedAt'
+      ]) &&
+      data.title is string && data.title.size() >= 3 && data.title.size() <= 220 &&
+      data.titleTe is string && data.titleTe.size() <= 260 &&
+      data.message is string && data.message.size() >= 5 && data.message.size() <= 1200 &&
+      data.messageTe is string && data.messageTe.size() <= 1500 &&
+      data.category is string && (
+        data.category == 'Exam' ||
+        data.category == 'Scholarship' ||
+        data.category == 'Course' ||
+        data.category == 'Deadline' ||
+        data.category == 'Announcement'
+      ) &&
+      isValidStateEnum(data.state) &&
+      data.sourceReference is string && data.sourceReference.size() >= 2 && data.sourceReference.size() <= 200 &&
+      data.officialUrl is string && data.officialUrl.size() >= 5 && data.officialUrl.size() <= 500 &&
+      data.dateLabel is string && data.dateLabel.size() >= 4 && data.dateLabel.size() <= 60 &&
+      data.published is bool &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidUserPreference(data) {
+      return data.keys().hasAll([
+        'userId', 'currentLevel', 'interests', 'preferredSubjects', 'careerGoals',
+        'preferredState', 'educationPreference', 'readNotificationIds', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'userId', 'currentLevel', 'interests', 'preferredSubjects', 'careerGoals',
+        'preferredState', 'educationPreference', 'readNotificationIds', 'createdAt', 'updatedAt'
+      ]) &&
+      data.userId is string && data.userId == request.auth.uid &&
+      data.currentLevel is string && (
+        data.currentLevel == 'class_10' ||
+        data.currentLevel == 'inter_mpc' ||
+        data.currentLevel == 'inter_bipc' ||
+        data.currentLevel == 'inter_cec_mec' ||
+        data.currentLevel == 'diploma_iti' ||
+        data.currentLevel == 'undergraduate'
+      ) &&
+      isBoundedStringList(data.interests, 10) &&
+      isBoundedStringList(data.preferredSubjects, 10) &&
+      isBoundedStringList(data.careerGoals, 10) &&
+      isValidStateEnum(data.preferredState) &&
+      data.educationPreference is string && (
+        data.educationPreference == 'degree_academic' ||
+        data.educationPreference == 'technical_professional' ||
+        data.educationPreference == 'diploma_skill' ||
+        data.educationPreference == 'any'
+      ) &&
+      isBoundedStringList(data.readNotificationIds, 100) &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRole(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt']) &&
+      data.keys().hasOnly(['uid', 'email', 'role', 'createdAt']) &&
+      isValidId(data.uid) &&
+      data.email is string && data.email.size() >= 5 && data.email.size() <= 180 &&
+      data.role is string && (data.role == 'admin' || data.role == 'super_admin') &&
+      data.createdAt is timestamp;
+    }
+
+    // =========================================================================
+    // COLLECTION MATCH BLOCKS
+    // =========================================================================
+
+    match /courses/{courseId} {
+      allow get: if isValidId(courseId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(courseId) && isValidCourse(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(courseId) && isValidCourse(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(courseId) && isAdmin();
+    }
+
+    match /courseCategories/{categoryId} {
+      allow get: if isValidId(categoryId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(categoryId) && isValidCourseCategory(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(categoryId) && isValidCourseCategory(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(categoryId) && isAdmin();
+    }
+
+    match /entranceExams/{examId} {
+      allow get: if isValidId(examId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(examId) && isValidEntranceExam(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(examId) && isValidEntranceExam(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(examId) && isAdmin();
+    }
+
+    match /colleges/{collegeId} {
+      allow get: if isValidId(collegeId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(collegeId) && isValidCollege(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(collegeId) && isValidCollege(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(collegeId) && isAdmin();
+    }
+
+    match /scholarships/{scholarshipId} {
+      allow get: if isValidId(scholarshipId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(scholarshipId) && isValidScholarship(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(scholarshipId) && isValidScholarship(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(scholarshipId) && isAdmin();
+    }
+
+    match /careers/{careerId} {
+      allow get: if isValidId(careerId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(careerId) && isValidCareer(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(careerId) && isValidCareer(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(careerId) && isAdmin();
+    }
+
+    match /careerUpdates/{updateId} {
+      allow get: if isValidId(updateId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(updateId) && isValidCareerUpdate(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(updateId) && isValidCareerUpdate(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(updateId) && isAdmin();
+    }
+
+    match /officialSources/{sourceId} {
+      allow get: if isValidId(sourceId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(sourceId) && isValidOfficialSource(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(sourceId) && isValidOfficialSource(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['lastChecked', 'lastStatus', 'lastHttpCode', 'lastDetectedTitle', 'lastError', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(sourceId) && isAdmin();
+    }
+
+    match /verificationHistory/{logId} {
+      allow get: if isValidId(logId) && isAdmin();
+      allow list: if isBootstrappedAdmin() || (isVerifiedUser() && existing().checkedByUid == request.auth.uid);
+      allow create: if isValidId(logId) && isValidVerificationLog(incoming()) &&
+        incoming().createdAt == request.time &&
+        exists(/databases/$(database)/documents/officialSources/$(incoming().sourceId)) &&
+        isAdmin();
+      allow update: if false;
+      allow delete: if isValidId(logId) && isAdmin();
+    }
+
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && (existing().published == true || isAdmin());
+      allow list: if existing().published == true || isBootstrappedAdmin();
+      allow create: if isValidId(notificationId) && isValidNotification(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        isAdmin();
+      allow update: if isValidId(notificationId) && isValidNotification(incoming()) &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['published', 'updatedAt'])) ||
+          isAdmin()
+        );
+      allow delete: if isValidId(notificationId) && isAdmin();
+    }
+
+    match /userPreferences/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if isVerifiedUser() && existing().userId == request.auth.uid;
+      allow create: if isValidId(userId) && isOwner(userId) &&
+        isValidUserPreference(incoming()) &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(userId) && isOwner(userId) &&
+        isValidUserPreference(incoming()) &&
+        incoming().userId == existing().userId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          incoming().diff(existing()).affectedKeys().hasOnly([
+            'currentLevel', 'interests', 'preferredSubjects', 'careerGoals',
+            'preferredState', 'educationPreference', 'readNotificationIds', 'updatedAt'
+          ]) ||
+          incoming().diff(existing()).affectedKeys().hasOnly(['readNotificationIds', 'updatedAt'])
+        );
+      allow delete: if isValidId(userId) && isOwner(userId);
+    }
+
+    match /adminRoles/{adminUid} {
+      allow get: if isValidId(adminUid) && (isOwner(adminUid) || isAdmin());
+      allow list: if isBootstrappedAdmin() || (isVerifiedUser() && existing().uid == request.auth.uid);
+      allow create: if isValidId(adminUid) && isBootstrappedAdmin() &&
+        isValidAdminRole(incoming()) &&
+        incoming().uid == adminUid &&
+        incoming().createdAt == request.time;
+      allow update: if isValidId(adminUid) && isBootstrappedAdmin() &&
+        isValidAdminRole(incoming()) &&
+        incoming().uid == existing().uid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['role', 'email']);
+      allow delete: if isValidId(adminUid) && isBootstrappedAdmin();
+    }
+  }
+}
